@@ -26,28 +26,49 @@ def index():
 @app.route("/restaurants", methods=["GET"])
 def get_restaurants():
     restaurants = Restaurant.query.all()
-    return jsonify([restaurant.to_dict(only=("id", "name", "address")) for restaurant in restaurants])
+    return jsonify([
+        {
+            "id": r.id,
+            "name": r.name,
+            "address": r.address
+        } for r in restaurants
+    ])
+
 
 @app.route("/restaurants/<int:id>", methods=["GET"])
 def get_restaurant_by_id(id):
     restaurant = Restaurant.query.get(id)
     if not restaurant:
         return jsonify({"error": "Restaurant not found"}), 404
-    return jsonify(restaurant.to_dict(only=("id", "name", "address", "restaurant_pizzas")))
+    return jsonify({
+        "id": restaurant.id,
+        "name": restaurant.name,
+        "address": restaurant.address,
+        "restaurant_pizzas": restaurant.restaurant_pizzas  # Assuming this is a related field
+    })
+
 
 @app.route("/restaurants/<int:id>", methods=["DELETE"])
 def delete_restaurant(id):
     restaurant = Restaurant.query.get(id)
     if not restaurant:
-        return jsonify({"error": "Restaurant not found "}), 404
+        return jsonify({"error": "Restaurant not found"}), 404
     db.session.delete(restaurant)
     db.session.commit()
     return make_response("", 204)
 
+
 @app.route("/pizzas", methods=["GET"])
 def get_pizzas():
     pizzas = Pizza.query.all()
-    return jsonify([pizza.to_dict(only=("id", "name", "ingredients")) for pizza in pizzas])
+    return jsonify([
+        {
+            "id": p.id,
+            "name": p.name,
+            "ingredients": p.ingredients
+        } for p in pizzas
+    ])
+
 
 @app.route('/restaurant_pizzas', methods=['POST'])
 def create_restaurant_pizza():
@@ -72,9 +93,22 @@ def create_restaurant_pizza():
         db.session.add(restaurant_pizza)
         db.session.commit()
 
-        response_data = restaurant_pizza.to_dict()
-        response_data["pizza"] = pizza.to_dict()
-        response_data["restaurant"] = restaurant.to_dict()
+        response_data = {
+            "id": restaurant_pizza.id,
+            "price": restaurant_pizza.price,
+            "pizza_id": restaurant_pizza.pizza_id,
+            "restaurant_id": restaurant_pizza.restaurant_id,
+            "pizza": {
+                "id": pizza.id,
+                "name": pizza.name,
+                "ingredients": pizza.ingredients
+            },
+            "restaurant": {
+                "id": restaurant.id,
+                "name": restaurant.name,
+                "address": restaurant.address
+            }
+        }
         return jsonify(response_data), 201
     except Exception as e:
         return jsonify({"errors": ["Validation errors"]}), 400
